@@ -1,0 +1,62 @@
+import random
+import telebot
+
+TOKEN = "7738167139:AAFbEx9iyEjBKlzUQ-fpK2oCBdVeJ1x1WPo"
+bot = telebot.TeleBot(TOKEN)
+
+zones = {
+    "Gauche bas (x1.92)": 0.87,
+    "Centre (x3.84)": 0.65,
+    "Droite haut (x7.68)": 0.42,
+    "Gauche haut (x15.36)": 0.24,
+    "Droite bas (x30.72)": 0.08
+}
+
+tentative = {}
+
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.reply_to(message, "👋 Bienvenue dans ton Bot Penalty IA ! Tape /tirer pour commencer.")
+
+@bot.message_handler(commands=['tirer'])
+def tirer(message):
+    user_id = message.chat.id
+    tentative[user_id] = tentative.get(user_id, 0) + 1
+    zone_recommandée = max(zones, key=lambda z: float(z.split("x")[1]) * zones[z])
+    proba = int(zones[zone_recommandée] * 100)
+
+    réponse = (
+        f"🎯 Tentative {tentative[user_id]} / 5\n"
+        f"✅ Zone conseillée : {zone_recommandée}\n"
+        f"📈 Taux de réussite estimé : {proba}%\n"
+        f"📛 Risque : {'Faible' if proba > 70 else 'Moyen' if proba > 40 else 'Élevé'}\n"
+    )
+
+    if tentative[user_id] >= 5:
+        réponse += "\n🛑 Tu as atteint 5 tirs. Tape /ramasser si tu veux sécuriser tes gains."
+
+    bot.reply_to(message, réponse)
+
+@bot.message_handler(commands=['ramasser'])
+def ramasser(message):
+    bot.reply_to(message, "💼 Conseillé : Ramasse tes gains si tu es en profit ✅\n"
+                          "🔁 Sinon, attends un tir facile (zone x1.92 ou x3.84) avant d'arrêter.")
+
+@bot.message_handler(commands=['reset'])
+def reset(message):
+    tentative[message.chat.id] = 0
+    bot.reply_to(message, "🔄 Session réinitialisée. Tape /tirer pour recommencer.")
+
+@bot.message_handler(commands=['aide'])
+def aide(message):
+    aide_txt = (
+        "📋 Commandes disponibles :\n"
+        "/tirer - Obtenir une prédiction de zone\n"
+        "/ramasser - Conseils pour sécuriser tes gains\n"
+        "/reset - Réinitialiser les tentatives\n"
+        "/aide - Voir cette aide"
+    )
+    bot.reply_to(message, aide_txt)
+
+# Lancer le bot
+bot.polling()
